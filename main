@@ -1,0 +1,125 @@
+--// Silera Hub V1 - Aim Assist by sco
+
+-- Services
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Create the GUI Elements
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ModMenu"
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main Frame for the Mod Menu
+local menuFrame = Instance.new("Frame")
+menuFrame.Size = UDim2.new(0, 300, 0, 400)
+menuFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+menuFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+menuFrame.BorderSizePixel = 0
+menuFrame.Visible = false -- Initially hidden
+menuFrame.Parent = screenGui
+
+-- Banner Text
+local bannerTop = Instance.new("TextLabel")
+bannerTop.Size = UDim2.new(1, 0, 0, 40)
+bannerTop.Position = UDim2.new(0, 0, 0, 0)
+bannerTop.Text = "Silera Hub V1"
+bannerTop.TextSize = 24
+bannerTop.TextColor3 = Color3.fromRGB(255, 255, 255)
+bannerTop.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+bannerTop.TextScaled = true
+bannerTop.Parent = menuFrame
+
+-- Close Button (To close the mod menu)
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 100, 0, 40)
+closeButton.Position = UDim2.new(1, -110, 0, 10)
+closeButton.Text = "Close"
+closeButton.TextSize = 18
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+closeButton.Parent = menuFrame
+
+closeButton.MouseButton1Click:Connect(function()
+    menuFrame.Visible = false
+end)
+
+-- Add a Button for Example (to toggle something, like ESP)
+local toggleESPButton = Instance.new("TextButton")
+toggleESPButton.Size = UDim2.new(0, 200, 0, 40)
+toggleESPButton.Position = UDim2.new(0, 50, 0, 100)
+toggleESPButton.Text = "Toggle ESP"
+toggleESPButton.TextSize = 18
+toggleESPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleESPButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+toggleESPButton.Parent = menuFrame
+
+toggleESPButton.MouseButton1Click:Connect(function()
+    getgenv().ESPEnabled = not getgenv().ESPEnabled
+end)
+
+-- Add Slider for Circle Size
+local circleSizeSlider = Instance.new("TextLabel")
+circleSizeSlider.Size = UDim2.new(0, 200, 0, 40)
+circleSizeSlider.Position = UDim2.new(0, 50, 0, 160)
+circleSizeSlider.Text = "Circle Size"
+circleSizeSlider.TextSize = 18
+circleSizeSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+circleSizeSlider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+circleSizeSlider.TextScaled = true
+circleSizeSlider.Parent = menuFrame
+
+local circleSize = Instance.new("Slider")
+circleSize.Size = UDim2.new(0, 200, 0, 20)
+circleSize.Position = UDim2.new(0, 50, 0, 210)
+circleSize.MinValue = 10
+circleSize.MaxValue = 200
+circleSize.Value = getgenv().AimAssistRadius
+circleSize.Parent = menuFrame
+
+circleSize.Changed:Connect(function()
+    getgenv().AimAssistRadius = circleSize.Value
+end)
+
+-- Mod Menu Toggle with Keybind (Right Alt)
+local menuOpen = false
+local toggleKey = Enum.KeyCode.RightAlt -- Change to Right Alt key
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == toggleKey then
+        menuOpen = not menuOpen
+        menuFrame.Visible = menuOpen
+    end
+end)
+
+-- Aim Assist Logic (same as before, no changes)
+local function getClosestPlayer(radius)
+    local closest, shortest = nil, radius
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                if dist < shortest then
+                    closest = player
+                    shortest = dist
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- Aim Assist Logic
+game:GetService("RunService").RenderStepped:Connect(function()
+    if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local target = getClosestPlayer(getgenv().AimAssistRadius)
+        if target and target.Character and target.Character:FindFirstChild(getgenv().AimPart) then
+            local part = target.Character[getgenv().AimPart]
+            local partPos = Camera:WorldToViewportPoint(part.Position)
+            local mouseDelta = (Vector2.new(partPos.X, partPos.Y) - UserInputService:GetMouseLocation()) * getgenv().AimSmoothness
+            mousemoverel(mouseDelta.X, mouseDelta.Y)
+        end
+    end
+end)
